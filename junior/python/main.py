@@ -64,6 +64,50 @@ def calculate_panels(
     return max(rotated_amount, not_rotated_amount)
 
 
+def get_overlapping_roofs_panels(
+    panel_width: int,
+    panel_height: int,
+    roof_width: int,
+    roof_height: int,
+    roof_width_transform: int,
+    roof_height_transform: int,
+) -> int:
+    """
+    Calculates the panels in a overlapping roof of 2 equal rectangles overlaping
+
+    Parameters:
+        panel_width [int]
+        panel_height [int]
+        roof_width [int]
+        roof_height[int]
+        roof_width_transform [int]: Moves the second rectangle away from the first one, starts in same width.
+        roof_height_transform [int]: Moves the second rectangle away from the first one, starts in same height.
+    Returns:
+        Number of panels
+    """
+    xt = abs(roof_width_transform)
+    yt = abs(roof_height_transform)
+    if xt > roof_width or xt < 1 or yt > roof_height or yt < 1:
+        return 0
+
+    x = roof_width
+    y = roof_height
+
+    rect_13 = (x, yt)
+    rect_2 = (x + xt, y - yt)
+    total_panels_1 = 2 * calculate_panels(
+        panel_width, panel_height, rect_13[0], rect_13[1]
+    ) + calculate_panels(panel_width, panel_height, rect_2[0], rect_2[1])
+
+    rect_46 = (xt, y)
+    rect_5 = (x - xt, y + yt)
+    total_panels_2 = 2 * calculate_panels(
+        panel_width, panel_height, rect_46[0], rect_46[1]
+    ) + calculate_panels(panel_width, panel_height, rect_5[0], rect_5[1])
+
+    return max(total_panels_1, total_panels_2)
+
+
 def run_tests() -> None:
     with open("test_cases.json", "r") as f:
         data = json.load(f)
