@@ -21,7 +21,13 @@ def calculate_fitted_area_with_remainder(
         int: remaining bottom height, not used
     """
 
+    if not a_width or not a_height or not e_width or not e_height:
+        return 0, 0, 0, 0
+
     elem_in_width, elem_in_height = (a_width // e_width, a_height // e_height)
+    if not elem_in_width or not elem_in_height:
+        return 0, 0, a_width, a_height
+
     main_width, main_height = (elem_in_width * e_width, elem_in_height * e_height)
     remaining_width, remaining_height = (a_width - main_width, a_height - main_height)
 
@@ -43,51 +49,45 @@ def get_panels_inside_rectangle(
     r_width, r_height = (
         (roof_width, roof_height) if not rotate_roof else (roof_height, roof_width)
     )
-
-    min_p, max_p = (
-        (panel_width, panel_height)
-        if panel_width < panel_height
-        else (panel_height, panel_width)
+    rotate_panel = panel_width > panel_height
+    p_width, p_height = (
+        (panel_width, panel_height) if not rotate_panel else (panel_height, panel_width)
     )
 
-    if max_p > r_height or min_p > r_width:
+    if p_height > r_height or p_width > r_width:
         return 0
 
-    can_panel_rotate = max_p <= r_width
+    can_panel_rotate = p_height <= r_width
 
     if not can_panel_rotate:
-        return r_width // min_p
+        return r_width // p_width
+
+    def get_panel_dimensions(rotate: bool = False) -> tuple[int, int]:
+        if rotate:
+            return p_height, p_width
+        return p_width, p_height
 
     w1, h1, _, rh1 = calculate_fitted_area_with_remainder(
-        r_width, r_height, panel_width, panel_height
+        r_width, r_height, *get_panel_dimensions()
     )
 
     extra_w1, extra_h1, _, _ = calculate_fitted_area_with_remainder(
-        r_width,
-        rh1,
-        panel_height,
-        panel_width,  # Simulate panel rotation of 90°
+        r_width, rh1, *get_panel_dimensions(True)
     )
 
-    total_1 = (w1 // panel_width) * (h1 // panel_height) + (
-        extra_w1 // panel_height
-    ) * (extra_h1 // panel_width)
+    total_1 = (w1 // p_width) * (h1 // p_height) + (extra_w1 // p_height) * (
+        extra_h1 // p_width
+    )
 
     w2, h2, rw2, _ = calculate_fitted_area_with_remainder(
-        r_width,
-        r_height,
-        panel_height,
-        panel_width,  # Simulate panel rotation of 90°
+        r_width, r_height, *get_panel_dimensions(True)
     )
     extra_w2, extra_h2, _, _ = calculate_fitted_area_with_remainder(
-        rw2,
-        r_height,
-        panel_width,
-        panel_height,
+        rw2, r_height, *get_panel_dimensions()
     )
 
-    total_2 = (w2 // panel_width) * (h2 // panel_height) + (extra_w2 // panel_width) * (
-        extra_h2 // panel_height
+    total_2 = (w2 // p_height) * (h2 // p_width) + (extra_w2 // p_width) * (
+        extra_h2 // p_height
     )
     return max(total_1, total_2)
 
@@ -121,25 +121,35 @@ def get_overlapping_roofs_panels(
     Returns:
         Number of panels
     """
-    xt = abs(roof_width_transform)
-    yt = abs(roof_height_transform)
-    if xt > roof_width or xt < 1 or yt > roof_height or yt < 1:
+    width_diff = abs(roof_width_transform)
+    height_diff = abs(roof_height_transform)
+    if (
+        width_diff > roof_width
+        or width_diff < 1
+        or height_diff > roof_height
+        or height_diff < 1
+    ):
         return 0
 
-    x = roof_width
-    y = roof_height
+    rect_13 = (roof_width, roof_height - height_diff)
+    rect_2 = (
+        roof_width + width_diff,
+        height_diff,
+    )
 
-    rect_13 = (x, yt)  # width, height - diff
-    rect_2 = (x + xt, y - yt)  # width + diff, height - diff
-    total_panels_1 = 2 * calculate_panels(
+    rect_13_panels = 2 * calculate_panels(
         panel_width, panel_height, rect_13[0], rect_13[1]
-    ) + calculate_panels(panel_width, panel_height, rect_2[0], rect_2[1])
+    )
+    rect_2_panels = calculate_panels(panel_width, panel_height, rect_2[0], rect_2[1])
+    total_panels_1 = rect_13_panels + rect_2_panels
 
-    rect_46 = (xt, y)  # diff, height
-    rect_5 = (x - xt, y + yt)  # width - diff, height + diff
-    total_panels_2 = 2 * calculate_panels(
+    rect_46 = (width_diff, roof_height)  # diff, height
+    rect_5 = (roof_width - width_diff, roof_height + height_diff)
+    rect_46_panels = 2 * calculate_panels(
         panel_width, panel_height, rect_46[0], rect_46[1]
-    ) + calculate_panels(panel_width, panel_height, rect_5[0], rect_5[1])
+    )
+    rect_5_panels = calculate_panels(panel_width, panel_height, rect_5[0], rect_5[1])
+    total_panels_2 = rect_46_panels + rect_5_panels
 
     return max(total_panels_1, total_panels_2)
 
@@ -181,6 +191,7 @@ def main() -> None:
     print("================================\n")
 
     run_tests()
+    print(get_overlapping_roofs_panels(3, 2, 12, 8, 5, 3))
 
 
 if __name__ == "__main__":
