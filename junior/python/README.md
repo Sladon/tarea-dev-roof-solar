@@ -54,8 +54,6 @@ EN PROCESO
 Hasta el momento, se obtienen todos los subrectangulos disponibles en la figura, en este momento serián 3 en un sentido y otros 3 en el otro sentido. Es decir, digamos que del poligono se sacan los 3 rectangulos observables de manera horizontal, y luego los 3 rectangulos observables de manera vrtical, luego utilizando las funciones ya creadas se obtienen todos los paneles que se pueden poner dentro de estos rectangulos.
 
 Por hacer: Identificar espacios sobrantes los cuales se puedan unir con los de otro rectangulo, de modo que se pueda rellenar el espacio sobrante con mas paneles.
-*[Explica cómo adaptaste tu algoritmo para resolver el bonus]*
-
 
 
 
