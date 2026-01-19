@@ -2,66 +2,102 @@ import json
 from typing import Dict, List
 
 
-def get_min_max(*args):
-    min_val = min(args)
-    max_val = max(args)
-    return min_val, max_val
-
-
-def get_amount(
-    area_x_size: int,
-    area_y_size: int,
-    element_x_size: int,
-    element_y_size: int,
-    rotate: bool = False,
+def calculate_fitted_area_with_remainder(
+    a_width: int, a_height: int, e_width: int, e_height: int
 ):
-    if rotate:
-        x_size = element_y_size
-        y_size = element_x_size
-    else:
-        x_size = element_x_size
-        y_size = element_y_size
+    """
+    Given an area of certain width and height, and an element area of certain width and height, determine the area that contains most of the panels.
 
-    def area_axis_elements(x_space: int, y_space: int):
-        return (x_space // x_size), (y_space // y_size)
+    Parameters:
+        a_width  [int]: width of the main area
+        a_height [int]: height of the main area
+        e_width  [int]: width of the element
+        e_height [int]: height of the element
 
-    x_amount, y_amount = area_axis_elements(area_x_size, area_y_size)
-    main_amount = x_amount * y_amount
+    Returns:
+        int: width of area that contains most panels
+        int: height of area that contains most panels
+        int: remaining right width, not used
+        int: remaining bottom height, not used
+    """
 
-    used_x_space = x_amount * x_size
-    remaining_x_space = area_x_size - used_x_space
-    remaining_y_space = area_y_size - (y_amount * y_size)
+    elem_in_width, elem_in_height = (a_width // e_width, a_height // e_height)
+    main_width, main_height = (elem_in_width * e_width, elem_in_height * e_height)
+    remaining_width, remaining_height = (a_width - main_width, a_height - main_height)
 
-    right_x_amount, right_y_amount = area_axis_elements(area_y_size, remaining_x_space)
-    right_amount = right_x_amount * right_y_amount
-
-    bottom_x_amount, bottom_y_amount = area_axis_elements(
-        remaining_y_space, used_x_space
+    return (
+        main_width,
+        main_height,
+        remaining_width,
+        remaining_height,
     )
-    bottom_amount = bottom_x_amount * bottom_y_amount
 
-    return main_amount + right_amount + bottom_amount
+
+def get_panels_inside_rectangle(
+    panel_width: int, panel_height: int, roof_width: int, roof_height: int
+):
+    if not panel_width or not panel_height:
+        return 0
+
+    rotate_roof = roof_width > roof_height
+    r_width, r_height = (
+        (roof_width, roof_height) if not rotate_roof else (roof_height, roof_width)
+    )
+
+    min_p, max_p = (
+        (panel_width, panel_height)
+        if panel_width < panel_height
+        else (panel_height, panel_width)
+    )
+
+    if max_p > r_height or min_p > r_width:
+        return 0
+
+    can_panel_rotate = max_p <= r_width
+
+    if not can_panel_rotate:
+        return r_width // min_p
+
+    w1, h1, _, rh1 = calculate_fitted_area_with_remainder(
+        r_width, r_height, panel_width, panel_height
+    )
+
+    extra_w1, extra_h1, _, _ = calculate_fitted_area_with_remainder(
+        r_width,
+        rh1,
+        panel_height,
+        panel_width,  # Simulate panel rotation of 90°
+    )
+
+    total_1 = (w1 // panel_width) * (h1 // panel_height) + (
+        extra_w1 // panel_height
+    ) * (extra_h1 // panel_width)
+
+    w2, h2, rw2, _ = calculate_fitted_area_with_remainder(
+        r_width,
+        r_height,
+        panel_height,
+        panel_width,  # Simulate panel rotation of 90°
+    )
+    extra_w2, extra_h2, _, _ = calculate_fitted_area_with_remainder(
+        rw2,
+        r_height,
+        panel_width,
+        panel_height,
+    )
+
+    total_2 = (w2 // panel_width) * (h2 // panel_height) + (extra_w2 // panel_width) * (
+        extra_h2 // panel_height
+    )
+    return max(total_1, total_2)
 
 
 def calculate_panels(
     panel_width: int, panel_height: int, roof_width: int, roof_height: int
 ) -> int:
-    x_roof, y_roof = get_min_max(roof_width, roof_height)
-    x_panel, y_panel = get_min_max(panel_width, panel_height)
-
-    if y_panel > y_roof or x_panel > x_roof:
-        return 0
-
-    can_rotate = y_panel <= x_roof
-    x_amount = x_roof // x_panel
-
-    if not can_rotate:
-        return x_amount
-
-    rotated_amount = get_amount(x_roof, y_roof, x_panel, y_panel, True)
-    not_rotated_amount = get_amount(x_roof, y_roof, x_panel, y_panel)
-
-    return max(rotated_amount, not_rotated_amount)
+    return get_panels_inside_rectangle(
+        panel_width, panel_height, roof_width, roof_height
+    )
 
 
 def get_overlapping_roofs_panels(
@@ -93,14 +129,14 @@ def get_overlapping_roofs_panels(
     x = roof_width
     y = roof_height
 
-    rect_13 = (x, yt)
-    rect_2 = (x + xt, y - yt)
+    rect_13 = (x, yt)  # width, height - diff
+    rect_2 = (x + xt, y - yt)  # width + diff, height - diff
     total_panels_1 = 2 * calculate_panels(
         panel_width, panel_height, rect_13[0], rect_13[1]
     ) + calculate_panels(panel_width, panel_height, rect_2[0], rect_2[1])
 
-    rect_46 = (xt, y)
-    rect_5 = (x - xt, y + yt)
+    rect_46 = (xt, y)  # diff, height
+    rect_5 = (x - xt, y + yt)  # width - diff, height + diff
     total_panels_2 = 2 * calculate_panels(
         panel_width, panel_height, rect_46[0], rect_46[1]
     ) + calculate_panels(panel_width, panel_height, rect_5[0], rect_5[1])
