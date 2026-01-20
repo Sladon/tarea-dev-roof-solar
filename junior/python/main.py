@@ -45,7 +45,7 @@ def calculate_fitted_area_with_remainder(
     )
 
 
-def get_rectangles_inside_rectangle(
+def get_sub_rectangles_inside_rectangle(
     sub_rect_width: int, sub_rect_height: int, rect_width: int, rect_height: int
 ) -> tuple[int, tuple[int, int], tuple[int, int], tuple[int, int]]:
     """
@@ -124,7 +124,7 @@ def get_rectangles_inside_rectangle(
 def calculate_panels(
     panel_width: int, panel_height: int, roof_width: int, roof_height: int
 ) -> int:
-    return get_rectangles_inside_rectangle(
+    return get_sub_rectangles_inside_rectangle(
         panel_width, panel_height, roof_width, roof_height
     )[0]
 
@@ -161,7 +161,9 @@ def get_overlapping_roofs_panels(
         return 0
 
     def get_panels(width, height):
-        return get_rectangles_inside_rectangle(panel_width, panel_height, width, height)
+        return get_sub_rectangles_inside_rectangle(
+            panel_width, panel_height, width, height
+        )
 
     rect_13 = get_panels(roof_width, roof_height - height_diff)
 
