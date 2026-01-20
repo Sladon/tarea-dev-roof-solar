@@ -24,6 +24,12 @@ def calculate_fitted_area_with_remainder(
     if not a_width or not a_height or not e_width or not e_height:
         return 0, 0, 0, 0
 
+    min_e, max_e = (e_width, e_height) if e_width < e_height else (e_height, e_width)
+    min_a, max_a = (a_width, a_height) if a_width < a_height else (a_height, a_width)
+
+    if max_e > max_a or min_e > min_a:
+        return 0, 0, 0, 0
+
     elem_in_width, elem_in_height = (a_width // e_width, a_height // e_height)
     if not elem_in_width or not elem_in_height:
         return 0, 0, a_width, a_height
@@ -45,58 +51,45 @@ def get_panels_inside_rectangle(
     if not panel_width or not panel_height:
         return 0
 
-    rotate_roof = roof_width > roof_height
-    r_width, r_height = (
-        (roof_width, roof_height) if not rotate_roof else (roof_height, roof_width)
-    )
-    rotate_panel = panel_width > panel_height
-    p_width, p_height = (
-        (panel_width, panel_height) if not rotate_panel else (panel_height, panel_width)
-    )
-
-    if p_height > r_height or p_width > r_width:
-        return 0
-
-    can_panel_rotate = p_height <= r_width
-
-    if not can_panel_rotate:
-        return r_width // p_width
-
     def get_panel_dimensions(rotate: bool = False) -> tuple[int, int]:
         if rotate:
-            return p_height, p_width
-        return p_width, p_height
+            return panel_height, panel_width
+        return panel_width, panel_height
 
-    w1, h1, _, rh1 = calculate_fitted_area_with_remainder(
-        r_width, r_height, *get_panel_dimensions()
+    w, h, rw, rh = calculate_fitted_area_with_remainder(
+        roof_width, roof_height, *get_panel_dimensions()
     )
+    main_panels = (w // panel_width) * (h // panel_height)
 
-    extra_w1, extra_h1, _, _ = calculate_fitted_area_with_remainder(
-        r_width, rh1, *get_panel_dimensions(True)
-    )
+    is_panel_horizontal = panel_width > panel_height
 
-    total_1 = (w1 // p_width) * (h1 // p_height) + (extra_w1 // p_height) * (
-        extra_h1 // p_width
-    )
+    # If panel is originally horizontal, next panels can be placed at the right empty space verically,
+    # otherwise the can be placed horizontally in the remaining bottom space
+    if is_panel_horizontal:
+        extra_w, extra_h, _, _ = calculate_fitted_area_with_remainder(
+            rw, roof_height, *get_panel_dimensions(True)
+        )
+    else:
+        extra_w, extra_h, _, _ = calculate_fitted_area_with_remainder(
+            roof_width, rh, *get_panel_dimensions(True)
+        )
 
-    w2, h2, rw2, _ = calculate_fitted_area_with_remainder(
-        r_width, r_height, *get_panel_dimensions(True)
-    )
-    extra_w2, extra_h2, _, _ = calculate_fitted_area_with_remainder(
-        rw2, r_height, *get_panel_dimensions()
-    )
-
-    total_2 = (w2 // p_height) * (h2 // p_width) + (extra_w2 // p_width) * (
-        extra_h2 // p_height
-    )
-    return max(total_1, total_2)
+    extra_panels = (extra_w // panel_height) * (extra_h // panel_width)
+    total = main_panels + extra_panels
+    return total
 
 
 def calculate_panels(
     panel_width: int, panel_height: int, roof_width: int, roof_height: int
 ) -> int:
-    return get_panels_inside_rectangle(
-        panel_width, panel_height, roof_width, roof_height
+    return max(
+        get_panels_inside_rectangle(panel_width, panel_height, roof_width, roof_height),
+        get_panels_inside_rectangle(
+            panel_height,  # Rotate panels 90° degrees
+            panel_width,  # Rotate panels 90° degrees
+            roof_width,
+            roof_height,
+        ),
     )
 
 
@@ -136,6 +129,16 @@ def get_overlapping_roofs_panels(
         roof_width + width_diff,
         height_diff,
     )
+
+    w_13, h_13, rw_13, rh_13 = calculate_fitted_area_with_remainder(
+        rect_13[0], rect_13[1], panel_width, panel_height
+    )
+    rect_13_rotated = w_13 + rw_13 != rect_13[0]
+
+    w_2, h_2, rw_2, rh_2 = calculate_fitted_area_with_remainder(
+        rect_2[0], rect_2[1], panel_width, panel_height
+    )
+    rect_2_rotated = w_2 + rw_2 != rect_2[0]
 
     rect_13_panels = 2 * calculate_panels(
         panel_width, panel_height, rect_13[0], rect_13[1]
