@@ -47,7 +47,15 @@ def calculate_fitted_area_with_remainder(
 
 def get_sub_rectangles_inside_rectangle(
     sub_rect_width: int, sub_rect_height: int, rect_width: int, rect_height: int
-) -> tuple[int, tuple[int, int], tuple[int, int], tuple[int, int]]:
+) -> tuple[
+    int,
+    bool,
+    tuple[int, int],
+    tuple[int, int],
+    tuple[int, int],
+    tuple[int, int],
+    tuple[int, int],
+]:
     """
     Calculates the amount of sub rectangles that can be placed inside the main rectangle area, it rotates the sub rectangles to check which direction is the best, and also fills the extra area with sub rectangles in the other direction.
 
@@ -59,19 +67,41 @@ def get_sub_rectangles_inside_rectangle(
 
     Returns:
         int: The number of sub rectangles that could be placed inside the main rectangle.
+        bool: Are the panels rotated in the main rectangle area, relative to the passed parameters.
+        tuple[int, int]: Main area dimensions.
+        tuple[int, int]: Remainder area dimensions.
         tuple[int, int]: Unused space at the right, represented as (width, height).
         tuple[int, int]: Unused space at the bottom, represented as (width, height).
         tuple[int, int]: Unused space at right bottom corner, represented as (width, height).
     """
-    total, leftover_r_top_to_bottom, leftover_b_left_to_right, overlap_area = (
+    (
+        total,
+        rotated,
+        main_area,
+        extra_area,
+        leftover_r_top_to_bottom,
+        leftover_b_left_to_right,
+        overlap_area,
+    ) = (
         0,
+        False,
+        (0, 0),
+        (0, 0),
         (0, 0),
         (0, 0),
         (0, 0),
     )
 
     if not sub_rect_width or not sub_rect_height:
-        return total, leftover_r_top_to_bottom, leftover_b_left_to_right, overlap_area
+        return (
+            total,
+            rotated,
+            main_area,
+            extra_area,
+            leftover_r_top_to_bottom,
+            leftover_b_left_to_right,
+            overlap_area,
+        )
 
     def get_panel_dimensions(rotate: bool = False) -> tuple[int, int]:
         if rotate:
@@ -103,22 +133,42 @@ def get_sub_rectangles_inside_rectangle(
         if total_panels < total:
             continue
 
+        def zero_if_any_zero(t: tuple[int, int]) -> tuple[int, int]:
+            return (0, 0) if 0 in t else t
+
+        main_area = zero_if_any_zero((w, h))
+        extra_area = zero_if_any_zero((extra_w, extra_h))
+        rotated = rotate_panel
         total = total_panels
-        leftover_r_top_to_bottom = (
-            (rw, rect_height - rh)
-            if not is_panel_horizontal
-            else (extra_rw, rect_height - extra_rh)
+        leftover_r_top_to_bottom = zero_if_any_zero(
+            (
+                (rw, rect_height - rh)
+                if not is_panel_horizontal
+                else (extra_rw, rect_height - extra_rh)
+            )
         )
 
-        leftover_b_left_to_right = (
-            (rect_width - extra_rw, extra_rh)
-            if not is_panel_horizontal
-            else (rect_width - rw, rh)
+        leftover_b_left_to_right = zero_if_any_zero(
+            (
+                (rect_width - extra_rw, extra_rh)
+                if not is_panel_horizontal
+                else (rect_width - rw, rh)
+            )
         )
 
-        overlap_area = (extra_rw, rh) if not is_panel_horizontal else (rw, extra_rh)
+        overlap_area = zero_if_any_zero(
+            (extra_rw, rh) if not is_panel_horizontal else (rw, extra_rh)
+        )
 
-    return total, leftover_r_top_to_bottom, leftover_b_left_to_right, overlap_area
+    return (
+        total,
+        rotated,
+        main_area,
+        extra_area,
+        leftover_r_top_to_bottom,
+        leftover_b_left_to_right,
+        overlap_area,
+    )
 
 
 def calculate_panels(
