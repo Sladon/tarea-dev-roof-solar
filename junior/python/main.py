@@ -67,7 +67,7 @@ def get_sub_rectangles_inside_rectangle(
 
     Returns:
         int: The number of sub rectangles that could be placed inside the main rectangle.
-        bool: Are the panels rotated in the main rectangle area, relative to the passed parameters.
+        bool: Are the panels rotated in the main rectangle area, relative to the given parameters.
         tuple[int, int]: Main area dimensions.
         tuple[int, int]: Remainder area dimensions.
         tuple[int, int]: Unused space at the right, represented as (width, height).
@@ -210,22 +210,45 @@ def get_overlapping_roofs_panels(
     ):
         return 0
 
-    def get_panels(width, height):
+    def get_panels(width: int, height: int):
         return get_sub_rectangles_inside_rectangle(
             panel_width, panel_height, width, height
         )
 
-    rect_13 = get_panels(roof_width, roof_height - height_diff)
+    options = [
+        (
+            (roof_width, height_diff),
+            (roof_width + width_diff, roof_height - height_diff),
+        ),
+        (
+            (width_diff, roof_height),
+            (roof_width - width_diff, roof_height + height_diff),
+        ),
+    ]
 
-    rect_2 = get_panels(
-        roof_width + width_diff,
-        height_diff,
-    )
+    total = 0
 
-    rect_46 = get_panels(width_diff, roof_height)  # diff, height
-    rect_5 = get_panels(roof_width - width_diff, roof_height + height_diff)
+    for border_rects, middle_rect in options:
+        panels_13, _, _, _, u_right_13, _, u_overlap_13 = get_panels(*border_rects)
+        panels_2, _, _, _, u_right_2, _, u_overlap_2 = get_panels(*middle_rect)
 
-    return max(rect_13[0] * 2 + rect_2[0], rect_46[0] * 2 + rect_5[0])
+        overlap_width = min(u_overlap_13[0], u_overlap_2[0])
+        overlap_height = min(u_overlap_13[1], u_overlap_2[1])
+        overlap_panels = get_panels(overlap_width, overlap_height)[0]
+
+        check_width = roof_width + u_right_2[0] + u_right_13[0]
+        check_height = roof_height - height_diff
+        if overlap_panels:
+            check_height -= overlap_height
+        panels_3b = get_panels(check_width, check_height)[0]
+
+        print(border_rects, middle_rect, panels_13, panels_2, panels_3b)
+
+        total_panels = max(panels_13 * 2, panels_13 + panels_3b) + panels_2
+        if total_panels > total:
+            total = total_panels
+
+    return total
 
 
 def run_tests() -> None:
@@ -265,7 +288,7 @@ def main() -> None:
     print("================================\n")
 
     run_tests()
-    print(get_overlapping_roofs_panels(3, 2, 12, 8, 5, 3))
+    print(get_overlapping_roofs_panels(3, 2, 12, 8, 5, 5))
 
 
 if __name__ == "__main__":
